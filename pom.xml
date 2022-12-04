@@ -189,6 +189,11 @@
             <id>scijava.public</id>
             <url>https://maven.scijava.org/content/groups/public/</url>
         </repository>
+        <!-- for OME-Zarr support -->
+        <repository>
+            <id>aind-repository</id>
+            <url>https://maven.pkg.github.com/AllenNeuralDynamics/jomezarr</url>
+        </repository>
     </repositories>
 
     <distributionManagement>
