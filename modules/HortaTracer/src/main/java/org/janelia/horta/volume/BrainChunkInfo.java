@@ -3,6 +3,8 @@ package org.janelia.horta.volume;
 import Jama.Matrix;
 import org.aind.omezarr.OmeZarrDataset;
 import org.aind.omezarr.image.OmeZarrImageStack;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.janelia.geometry3d.Box3;
 import org.janelia.geometry3d.ConstVector3;
 import org.janelia.geometry3d.Vector3;
@@ -23,6 +25,10 @@ import java.util.List;
 public class BrainChunkInfo extends BrainTileInfo {
     private final OmeZarrDataset dataset;
 
+    private final int[] readShape;
+
+    private final int[] readOffset;
+
     private final int[] shapeMicrometers;
 
     private final int[] originMicrometers;
@@ -31,39 +37,70 @@ public class BrainChunkInfo extends BrainTileInfo {
 
     private final int bytesPerIntensity;
 
+    private final Matrix transform;
+
     private Matrix stageCoordToTexCoord;
+
+    private final String tileRelativePath;
 
     private int colorChannelIndex = 0;
 
-    public BrainChunkInfo(OmeZarrDataset dataset) throws IOException {
+    public BrainChunkInfo(OmeZarrDataset dataset, int[] shape, int[] offset, double[] voxelSize, int channelCount) throws IOException {
         super();
+
+        System.out.println(String.format("creating chunk for path %s: shape [%d, %d, %d]; offset  [%d, %d, %d]", dataset.getPath(),
+                shape[2], shape[1], shape[0], offset[2], offset[1], offset[0]));
 
         this.dataset = dataset;
 
-        int[] shape = dataset.getShape();
-
-        // TODO any translate from multiscale
+        // TODO include any translate from multiscale/dataset coordinate transforms.
         originMicrometers = new int[3];
         shapeMicrometers = new int[3];
         pixelDims = new int[4];
 
-        // TODO assumes 1um per voxel.
-        shapeMicrometers[0] = pixelDims[0] = shape[4];
-        shapeMicrometers[1] = pixelDims[1] = shape[3];
-        shapeMicrometers[2] = pixelDims[2] = shape[2];
-        pixelDims[3] = shape[1];
+        pixelDims[0] = shape[2];
+        pixelDims[1] = shape[1];
+        pixelDims[2] = shape[0];
+
+        originMicrometers[0] = (int) (voxelSize[0] * offset[2]);
+        originMicrometers[1] = (int) (voxelSize[1] * offset[1]);
+        originMicrometers[2] = (int) (voxelSize[2] * offset[0]);
+
+        shapeMicrometers[0] = (int) (voxelSize[0] * pixelDims[0]);
+        shapeMicrometers[1] = (int) (voxelSize[1] * pixelDims[1]);
+        shapeMicrometers[2] = (int) (voxelSize[2] * pixelDims[2]);
+
+        System.out.println(String.format("created chunk with origin [%d, %d, %d]; size  [%d, %d, %d]",
+                originMicrometers[0], originMicrometers[1], originMicrometers[2], shapeMicrometers[0], shapeMicrometers[1], shapeMicrometers[2]));
+
+        pixelDims[3] = channelCount;
+
+        transform = new Matrix(new double[][]{{voxelSize[0], 0, 0, 0}, {0, voxelSize[1], 0, 0}, {0, 0, voxelSize[2], 0}, {offset[2], offset[1], offset[0], 1}});
 
         // TODO assumes 2 bytes per intensity.
         this.bytesPerIntensity = 2;
+
+        this.readShape = new int[]{1, 1, shape[0], shape[1], shape[2]};
+
+        // Assumes tczyx dataset.  Default to time 0, channel 0.
+        this.readOffset = new int[]{0, 0, offset[0], offset[1], offset[2]};
+
+        tileRelativePath = String.format("[%s] [%d, %d, %d] [%d, %d, %d]", dataset.getPath(), originMicrometers[0], originMicrometers[1], originMicrometers[2], shapeMicrometers[0], shapeMicrometers[1], shapeMicrometers[2]);
+    }
+    @Override
+    public String getTileRelativePath() {
+        return tileRelativePath;
     }
 
     @Override
     public List<? extends ConstVector3> getCornerLocations() {
         List<ConstVector3> result = new ArrayList<>();
-        for (int pz : new int[]{0, pixelDims[2]}) {
-            for (int py : new int[]{0, pixelDims[1]}) {
-                for (int px : new int[]{0, pixelDims[0]}) {
-                    Matrix um = new Matrix(new double[]{px, py, pz, 0, 1}, 5);
+        for (int pz : new int[]{readOffset[2], readOffset[2] + pixelDims[2]}) {
+            for (int py : new int[]{readOffset[3], readOffset[3] + pixelDims[1]}) {
+                for (int px : new int[]{readOffset[4], readOffset[4] + pixelDims[0]}) {
+
+                    Matrix corner = new Matrix(new double[]{px, py, pz, 1}, 4);
+                    Matrix um = transform.times(corner);
                     ConstVector3 v = new Vector3(
                             (float) um.get(0, 0),
                             (float) um.get(1, 0),
@@ -120,9 +157,12 @@ public class BrainChunkInfo extends BrainTileInfo {
         Texture3d texture = new Texture3d();
 
         try {
+            System.out.println(String.format("loading brick with origin [%d, %d, %d]; size  [%d, %d, %d]",
+                    originMicrometers[0], originMicrometers[1], originMicrometers[2], shapeMicrometers[0], shapeMicrometers[1], shapeMicrometers[2]));
+
             OmeZarrImageStack stack = new OmeZarrImageStack(dataset);
 
-            Raster[] slices = stack.asSlices(0, colorChannelIndex, true);
+            Raster[] slices = stack.asSlices(readShape, readOffset, true);
 
             texture.loadRasterSlices(slices, stack.getColorModel());
 
@@ -139,7 +179,7 @@ public class BrainChunkInfo extends BrainTileInfo {
             return false;
         }
 
-        return false;
+        return ((BrainChunkInfo) other).getTileRelativePath() == tileRelativePath;
     }
 
     @Override
@@ -154,5 +194,25 @@ public class BrainChunkInfo extends BrainTileInfo {
                     {0, 0, 0, 1}});
         }
         return stageCoordToTexCoord;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+
+        if (o == null || getClass() != o.getClass()) return false;
+
+        BrainChunkInfo that = (BrainChunkInfo) o;
+
+        return new EqualsBuilder()
+                .append(tileRelativePath, that.tileRelativePath)
+                .isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 37)
+                .append(tileRelativePath)
+                .toHashCode();
     }
 }
