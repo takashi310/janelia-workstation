@@ -4,14 +4,13 @@ import com.google.common.collect.ImmutableSet;
 import org.aind.omezarr.OmeZarrAxisUnit;
 import org.aind.omezarr.OmeZarrDataset;
 import org.aind.omezarr.OmeZarrGroup;
+import org.aind.omezarr.image.AutoContrastParameters;
+import org.aind.omezarr.image.TCZYXRasterZStack;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 /**
  * StaticVolumeBrickSource for Ome-Zarr datasets.
@@ -19,7 +18,11 @@ import java.util.List;
 public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
     private final ArrayList<Double> resolutionsMicrometers;
 
-    private final HashMap<Double, BrickInfoSet> brickInfoSets;
+    private final Map<Double, BrickInfoSet> brickInfoSets;
+
+    private final Map<String, AutoContrastParameters> autoContrastMap = new HashMap<>();
+
+    private final int minDataset = 7;
 
     public OmeZarrVolumeBrickSource(Path path) throws IOException {
         OmeZarrGroup fileset = OmeZarrGroup.open(path);
@@ -30,7 +33,7 @@ public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
 
         brickInfoSets = new HashMap<>();
 
-        for (int idx = datasetCount - 8; idx < datasetCount; idx++) {
+        for (int idx = minDataset; idx < datasetCount; idx++) {
             OmeZarrDataset dataset = fileset.getAttributes().getMultiscales()[0].getDatasets().get(idx);
 
             if (!dataset.isValid()) {
@@ -85,7 +88,7 @@ public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
         return Pair.of(resolutionMicrometers, brickInfoSet);
     }
 
-    private final int chunkSegment = 256;
+    private final int chunkSegment = 512;
 
     /**
      * Only valid for tczyx OmeZarr datasets.
@@ -97,33 +100,38 @@ public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
     private List<BrainChunkInfo> createTilesForResolution(OmeZarrDataset dataset) throws IOException {
         List<BrainChunkInfo> brickInfoList = new ArrayList<>();
 
+        // [t, c, z, y, x]
         int[] shape = dataset.getShape();
 
-        // TODO does not chunk bricks
-        int[] chunkSize = {shape[2], shape[3], shape[4]};
+        // [x, y, z]
+        int[] chunkSize = {shape[4], shape[3], shape[2]};
 
-        // BrainChunkInfo info = null;
+        int[] autoContrastShape = {1, 1, 512,512, 512};
+
+        AutoContrastParameters parameters = TCZYXRasterZStack.computeAutoContrast(dataset, autoContrastShape);
+
+        autoContrastMap.put(dataset.toString(), parameters);
 
         // Raw TIFF chunks are 1024 x 1536 x 251 for reference (~400M voxels) or 350 x 450 x 250 um (~150k um3).
         for (int xIdx = 0; xIdx < shape[4]; xIdx += chunkSegment) {
             for (int yIdx = 0; yIdx < shape[3]; yIdx += chunkSegment) {
 
-                int[] offset = {0, yIdx, xIdx};
+                // [x, y, z]
+                int[] offset = {xIdx, yIdx, 0};
 
+                // [z, y, x]
                 List<Double> spatialShape = dataset.getSpatialResolution(OmeZarrAxisUnit.MICROMETER);
 
+                chunkSize[0] = Math.min(shape[4] - xIdx, chunkSegment);
                 chunkSize[1] = Math.min(shape[3] - yIdx, chunkSegment);
-                chunkSize[2] = Math.min(shape[4] - xIdx, chunkSegment);
 
-                // spatialShape is returned as ordered in OmeZarr attributes file which is zyx.  Should probably change in jomezarr.
+                // [x, y, z]
                 double[] voxelSize = {spatialShape.get(2), spatialShape.get(1), spatialShape.get(0)};
 
-                brickInfoList.add(new BrainChunkInfo(dataset, chunkSize, offset, voxelSize, shape[1]));
-                // info = new BrainChunkInfo(dataset, chunkSize, offset, voxelSize, shape[1]);
+                // All args [x, y, z]
+                brickInfoList.add(new BrainChunkInfo(dataset, chunkSize, offset, voxelSize, shape[1], parameters));
             }
         }
-
-        // brickInfoList.add(info);
 
         return brickInfoList;
     }
