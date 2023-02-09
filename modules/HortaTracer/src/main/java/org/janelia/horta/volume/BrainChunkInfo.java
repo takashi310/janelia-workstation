@@ -197,13 +197,6 @@ public class BrainChunkInfo extends BrainTileInfo {
         Texture3d texture = new Texture3d();
 
         try {
-            // System.out.println(String.format("loading brick with origin [%d, %d, %d]; size  [%d, %d, %d]",
-            //        originMicrometers[0], originMicrometers[1], originMicrometers[2], shapeMicrometers[0], shapeMicrometers[1], shapeMicrometers[2]));
-
-            // OmeZarrImageStack stack = new OmeZarrImageStack(dataset);
-
-            // Raster[] slices = stack.asSlices(readShape, readOffset, true);
-
             WritableRaster[] slices = TCZYXRasterZStack.fromDataset(dataset, readShape, readOffset, true, autoContrastParameters, false);
 
             texture.loadRasterSlices(slices, colorModel);
