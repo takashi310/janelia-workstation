@@ -1,5 +1,7 @@
 package org.janelia.horta;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.file.Paths;
@@ -15,7 +17,9 @@ import com.google.common.base.Objects;
 import org.apache.commons.httpclient.DefaultHttpMethodRetryHandler;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.lang.StringUtils;
+import org.janelia.horta.omezarr.OmeZarrJadeReader;
 import org.janelia.horta.volume.OmeZarrVolumeBrickSource;
+import org.janelia.rendering.ymlrepr.RawVolReader;
 import org.janelia.workstation.controller.tileimagery.OsFilePathRemapper;
 import org.janelia.geometry3d.PerspectiveCamera;
 import org.janelia.geometry3d.Vantage;
@@ -36,6 +40,7 @@ import org.janelia.rendering.utils.ClientProxy;
 import org.janelia.scenewindow.SceneWindow;
 import org.janelia.workstation.controller.model.TmModelManager;
 import org.janelia.workstation.core.api.AccessManager;
+import org.janelia.workstation.core.api.FileMgr;
 import org.janelia.workstation.core.api.http.RestJsonClientManager;
 import org.janelia.workstation.geom.Vec3;
 import org.netbeans.api.progress.ProgressHandle;
@@ -111,7 +116,7 @@ public class ViewLoader {
                         loader.loadTileAtCurrentFocus(volumeBrickSource, 0);
                         // for raw tiles the camera needs to be set after the tile began loading in order to trigger the display
                         progress.setDisplayName("Centering on location...");
-                        setCameraLocation(syncZoom, syncLocation);
+                        setCameraLocation(1, new Vec3(0, 0, 0));
                     }
 
                     nttc.redrawNow();
@@ -190,9 +195,8 @@ public class ViewLoader {
 
         if (rawFilePath.toLowerCase().endsWith(".zarr")) {
             try {
-                String fullPath = renderedVolume.getVolumeLocation().getContentURIFromAbsolutePath(rawFilePath);
-
-                return new OmeZarrVolumeBrickSource(Paths.get(rawFilePath));
+                return new OmeZarrVolumeBrickSource(rawFilePath).init(new OmeZarrJadeReader(FileMgr.getFileMgr().getStorageService(), rawFilePath),
+                        progress::progress);
             } catch (Exception ex) {
                 return null;
             }

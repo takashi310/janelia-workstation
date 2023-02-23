@@ -7,44 +7,91 @@ import org.aind.omezarr.OmeZarrGroup;
 import org.aind.omezarr.image.AutoContrastParameters;
 import org.aind.omezarr.image.TCZYXRasterZStack;
 import org.apache.commons.lang3.tuple.Pair;
+import org.janelia.horta.TileLoader;
+import org.janelia.horta.omezarr.JadeZarrStoreProvider;
+import org.janelia.horta.omezarr.OmeZarrJadeReader;
+import org.janelia.model.domain.tiledMicroscope.TmSample;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
+import java.util.function.Consumer;
 
 /**
  * StaticVolumeBrickSource for Ome-Zarr datasets.
  */
 public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
-    private final ArrayList<Double> resolutionsMicrometers;
+    private final static Logger log = LoggerFactory.getLogger(OmeZarrJadeReader.class);
 
-    private final Map<Double, BrickInfoSet> brickInfoSets;
+    private final ArrayList<Double> resolutionsMicrometers = new ArrayList<>();
+
+    private final Map<Double, BrickInfoSet> brickInfoSets = new HashMap<>();
 
     private final Map<String, AutoContrastParameters> autoContrastMap = new HashMap<>();
 
-    private final int minDataset = 7;
+    private final String basePath;
 
-    public OmeZarrVolumeBrickSource(Path path) throws IOException {
-        OmeZarrGroup fileset = OmeZarrGroup.open(path);
+    private OmeZarrJadeReader reader;
 
+    public OmeZarrVolumeBrickSource(String path) {
+        basePath = path;
+    }
+
+    public OmeZarrVolumeBrickSource init() {
+        try {
+            OmeZarrGroup fileset = OmeZarrGroup.open(Paths.get(basePath));
+
+            this.reader = null;
+
+            init(fileset);
+        } catch (IOException ex) {
+            log.info("failed to initialize ome-zarr volume source");
+        }
+
+        return this;
+    }
+
+    public OmeZarrVolumeBrickSource init(OmeZarrJadeReader reader, Consumer<Integer> progressUpdater) {
+        try {
+            this.reader = reader;
+
+            OmeZarrGroup fileset = OmeZarrGroup.open(new JadeZarrStoreProvider("", reader));
+
+            init(fileset);
+        } catch (IOException ex) {
+            log.info("failed to initialize ome-zarr volume source");
+        }
+
+        return this;
+    }
+
+    private void init(OmeZarrGroup fileset) {
         int datasetCount = fileset.getAttributes().getMultiscales()[0].getDatasets().size();
 
-        resolutionsMicrometers = new ArrayList<>();
+        for (int idx = 0; idx < datasetCount; idx++) {
+            try {
+                OmeZarrDataset dataset = fileset.getAttributes().getMultiscales()[0].getDatasets().get(idx);
 
-        brickInfoSets = new HashMap<>();
+                if (this.reader != null) {
+                    dataset.setExternalZarrStore(new JadeZarrStoreProvider(dataset.getPath(), reader));
+                }
 
-        for (int idx = minDataset; idx < datasetCount; idx++) {
-            OmeZarrDataset dataset = fileset.getAttributes().getMultiscales()[0].getDatasets().get(idx);
+                if (!dataset.isValid()) {
+                    continue;
+                }
 
-            if (!dataset.isValid()) {
-                continue;
+                Pair<Double, BrickInfoSet> pair = createBricksetForDataset(dataset);
+
+                resolutionsMicrometers.add(pair.getLeft());
+
+                brickInfoSets.put(pair.getLeft(), pair.getRight());
+            } catch (Exception ex) {
+                log.info("failed to initialize dataset at index " + idx);
             }
-
-            Pair<Double, BrickInfoSet> pair = createBricksetForDataset(dataset);
-
-            resolutionsMicrometers.add(pair.getLeft());
-
-            brickInfoSets.put(pair.getLeft(), pair.getRight());
         }
     }
 
@@ -106,7 +153,7 @@ public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
         // [x, y, z]
         int[] chunkSize = {shape[4], shape[3], shape[2]};
 
-        int[] autoContrastShape = {1, 1, 512,512, 512};
+        int[] autoContrastShape = {1, 1, 512, 512, 512};
 
         AutoContrastParameters parameters = TCZYXRasterZStack.computeAutoContrast(dataset, autoContrastShape);
 

@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
  */
 class KtxBlockMenuBuilder {
 
-    private boolean preferKtx = true;
+    private boolean preferKtx = false;
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 

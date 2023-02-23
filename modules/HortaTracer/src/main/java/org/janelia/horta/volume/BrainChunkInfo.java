@@ -193,6 +193,12 @@ public class BrainChunkInfo extends BrainTileInfo {
     private static final ColorModel colorModel = new ComponentColorModel(ColorSpace.getInstance(ColorSpace.CS_GRAY), false, true, Transparency.OPAQUE, DataBuffer.TYPE_USHORT);
 
     @Override
+    public Texture3d loadBrick(double maxEdgePadWidth, int colorChannel, String fileExtension) {
+        // setColorChannelIndex(colorChannel);
+        return loadBrick(maxEdgePadWidth, fileExtension);
+    }
+
+    @Override
     public Texture3d loadBrick(double maxEdgePadWidth, String fileExtension) {
         Texture3d texture = new Texture3d();
 

@@ -993,7 +993,7 @@ public final class NeuronTracerTopComponent extends TopComponent
     }
 
     public boolean loadDroppedOmeZarr(String sourceName) throws IOException {
-        setVolumeSource(new OmeZarrVolumeBrickSource(Paths.get(sourceName)));
+        setVolumeSource(new OmeZarrVolumeBrickSource(sourceName).init());
         neuronTraceLoader.loadTileAtCurrentFocus(volumeSource);
         return true;
     }
