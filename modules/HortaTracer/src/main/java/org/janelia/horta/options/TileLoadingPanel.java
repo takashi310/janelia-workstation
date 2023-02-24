@@ -21,10 +21,10 @@ public class TileLoadingPanel extends javax.swing.JPanel {
     private static final Logger log = LoggerFactory.getLogger(TileLoadingPanel.class);
     
     public static final String PREFERENCE_CONCURRENT_LOADS = "ConcurrentLoads";
-    public static final String PREFERENCE_CONCURRENT_LOADS_DEFAULT = "1";
+    public static final String PREFERENCE_CONCURRENT_LOADS_DEFAULT = "2";
 
     public static final String PREFERENCE_RAM_TILE_COUNT = "RamTileCount";
-    public static final String PREFERENCE_RAM_TILE_COUNT_DEFAULT = "3";
+    public static final String PREFERENCE_RAM_TILE_COUNT_DEFAULT = "8";
 
     public static final String PREFERENCE_ANNOTATIONS_CLICK_MODE = "AnnotationClickMode";
     public static final String CLICK_MODE_SHIFT_LEFT_CLICK = "shift-left-click";

@@ -86,10 +86,6 @@ public class BrainChunkInfo extends BrainTileInfo {
 
         pixelDims[3] = channelCount;
 
-        // Matrix rotation = new Matrix(new double[][]{{0, 0, -1, 0}, {0, 1, 0, 0}, {1, 0, 0, 0}, {0, 0, 0, 1}});
-
-        // Matrix translation = new Matrix(new double[][]{{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {offset[0], offset[1], offset[2], 1}});
-
         Matrix scaling = new Matrix(new double[][]{{voxelSize[0], 0, 0, 0}, {0, voxelSize[1], 0, 0}, {0, 0, voxelSize[2], 0}, {0, 0, 0, 1}});
 
         transform = scaling; // translation.times(scaling);
@@ -110,35 +106,15 @@ public class BrainChunkInfo extends BrainTileInfo {
     public String getTileRelativePath() {
         return tileRelativePath;
     }
-/*
-    @Override
-    public List<? extends ConstVector3> getCornerLocations() {
-        List<ConstVector3> result = new ArrayList<>();
-        for (int pz : new int[]{readOffset[2], readOffset[2] + pixelDims[2]}) {
-            for (int py : new int[]{readOffset[3], readOffset[3] + pixelDims[1]}) {
-                for (int px : new int[]{readOffset[4], readOffset[4] + pixelDims[0]}) {
-                    Matrix corner = new Matrix(new double[]{px, py, pz, 1}, 4);
-                    Matrix um = transform.times(corner);
-                    ConstVector3 v = new Vector3(
-                            (float) um.get(0, 0),
-                            (float) um.get(1, 0),
-                            (float) um.get(2, 0));
-                    result.add(v);
-                }
-            }
-        }
-        return result;
-    }
-    */
+
     @Override
     public List<? extends ConstVector3> getCornerLocations() {
         List<ConstVector3> result = new ArrayList<>();
         for (int pz : new int[]{0, pixelDims[2]}) {
             for (int py : new int[]{0, pixelDims[1]}) {
                 for (int px : new int[]{0, pixelDims[0]}) {
-                    // Matrix corner = new Matrix(new double[]{px * voxelSize[0], py * voxelSize[1], pz * voxelSize[2], 1}, 4);
-                    Matrix corner = new Matrix(new double[]{px, py, pz, 1}, 4);
-                    Matrix um = corner; //transform.times(corner);
+                    Matrix corner = new Matrix(new double[]{px + readOffset[4], py + readOffset[3], pz + readOffset[2], 1}, 4);
+                    Matrix um = transform.times(corner);
                     ConstVector3 v = new Vector3(
                             (float) um.get(0, 0),
                             (float) um.get(1, 0),
@@ -227,12 +203,16 @@ public class BrainChunkInfo extends BrainTileInfo {
     public Matrix getStageCoordToTexCoord() {
         // Compute matrix just-in-time
         if (stageCoordToTexCoord == null) {
+            Matrix stageUmToVoxel = transform.inverse();
+
             // For ray casting, convert from stageUm to texture coordinates (i.e. normalized voxels)
-            stageCoordToTexCoord = new Matrix(new double[][]{
+            Matrix microsToPixel = new Matrix(new double[][]{
                     {1.0 / pixelDims[0], 0, 0, 0},
                     {0, 1.0 / pixelDims[1], 0, 0},
                     {0, 0, 1.0 / pixelDims[2], 0},
                     {0, 0, 0, 1}});
+
+            stageCoordToTexCoord = microsToPixel.times(stageUmToVoxel);
         }
         return stageCoordToTexCoord;
     }

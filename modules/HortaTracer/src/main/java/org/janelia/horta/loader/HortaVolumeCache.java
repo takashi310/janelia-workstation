@@ -42,8 +42,8 @@ import java.util.prefs.Preferences;
 public class HortaVolumeCache {
     private static final Logger LOG = LoggerFactory.getLogger(HortaVolumeCache.class);
 
-    private int ramTileCount = 3; // Three is better than two for tile availability
-    private int gpuTileCount = 1;
+    private int ramTileCount = 8; // Three is better than two for tile availability
+    private int gpuTileCount = 3;
     private final PerspectiveCamera camera;
     private StaticVolumeBrickSource source = null;
 

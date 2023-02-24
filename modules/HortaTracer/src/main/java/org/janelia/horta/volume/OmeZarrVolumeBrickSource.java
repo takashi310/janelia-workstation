@@ -137,6 +137,8 @@ public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
 
     private final int chunkSegment = 512;
 
+    // private final int zChunkSegment = 1024;
+
     /**
      * Only valid for tczyx OmeZarr datasets.
      *
@@ -159,24 +161,31 @@ public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
 
         autoContrastMap.put(dataset.toString(), parameters);
 
+        // [z, y, x]
+        List<Double> spatialShape = dataset.getSpatialResolution(OmeZarrAxisUnit.MICROMETER);
+
+        // int chunkSegment = (int)Math.round(4e5 / chunkSize[2] / 2.0);
+
+        log.info("chunkSegment for dataset path " + dataset.getPath() + ": " + chunkSegment);
+
         // Raw TIFF chunks are 1024 x 1536 x 251 for reference (~400M voxels) or 350 x 450 x 250 um (~150k um3).
         for (int xIdx = 0; xIdx < shape[4]; xIdx += chunkSegment) {
             for (int yIdx = 0; yIdx < shape[3]; yIdx += chunkSegment) {
+                // for (int zIdx = 0; zIdx < shape[2]; zIdx += zChunkSegment) {
 
-                // [x, y, z]
-                int[] offset = {xIdx, yIdx, 0};
+                    // [x, y, z]
+                    int[] offset = {xIdx, yIdx, 0}; // zIdx};
 
-                // [z, y, x]
-                List<Double> spatialShape = dataset.getSpatialResolution(OmeZarrAxisUnit.MICROMETER);
+                    chunkSize[0] = Math.min(shape[4] - xIdx, chunkSegment);
+                    chunkSize[1] = Math.min(shape[3] - yIdx, chunkSegment);
+                    // chunkSize[2] = Math.min(shape[2] - zIdx, zChunkSegment);
 
-                chunkSize[0] = Math.min(shape[4] - xIdx, chunkSegment);
-                chunkSize[1] = Math.min(shape[3] - yIdx, chunkSegment);
+                    // [x, y, z]
+                    double[] voxelSize = {spatialShape.get(2), spatialShape.get(1), spatialShape.get(0)};
 
-                // [x, y, z]
-                double[] voxelSize = {spatialShape.get(2), spatialShape.get(1), spatialShape.get(0)};
-
-                // All args [x, y, z]
-                brickInfoList.add(new BrainChunkInfo(dataset, chunkSize, offset, voxelSize, shape[1], parameters));
+                    // All args [x, y, z]
+                    brickInfoList.add(new BrainChunkInfo(dataset, chunkSize, offset, voxelSize, shape[1], parameters));
+                // }
             }
         }
 
