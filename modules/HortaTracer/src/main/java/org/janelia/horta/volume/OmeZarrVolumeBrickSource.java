@@ -72,7 +72,7 @@ public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
     private void init(OmeZarrGroup fileset) {
         int datasetCount = fileset.getAttributes().getMultiscales()[0].getDatasets().size();
 
-        for (int idx = 5; idx < datasetCount; idx++) {
+        for (int idx = 0; idx < datasetCount; idx++) {
             try {
                 OmeZarrDataset dataset = fileset.getAttributes().getMultiscales()[0].getDatasets().get(idx);
 
