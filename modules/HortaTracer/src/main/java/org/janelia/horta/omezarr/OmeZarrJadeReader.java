@@ -64,9 +64,4 @@ public class OmeZarrJadeReader {
             throw new RuntimeException(e);
         }
     }
-
-    protected static String removeLeadingSlash(final String pathName) {
-
-        return pathName.startsWith("/") || pathName.startsWith("\\") ? pathName.substring(1) : pathName;
-    }
 }
