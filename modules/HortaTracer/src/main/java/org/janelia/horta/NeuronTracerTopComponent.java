@@ -1905,7 +1905,7 @@ public final class NeuronTracerTopComponent extends TopComponent
         // TODO - actually cubify
         Vantage v = sceneWindow.getVantage();
         if (doCubifyVoxels) {
-            v.setWorldScaleHack(1, 1, 1);
+            v.setWorldScaleHack(1, 1, 0.4f);
             // logger.info("distort");
         } else {
             v.setWorldScaleHack(1, 1, 1);
