@@ -161,7 +161,7 @@ public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
                 double existingMax = parameters.min + (65535.0 / parameters.slope);
 
                 double min = Math.max(100, parameters.min * 0.1);
-                double max = Math.min(65535.0, Math.max(min + 100, existingMax * 10));
+                double max = Math.min(65535.0, Math.max(min + 100, existingMax * 4));
                 double slope = 65535.0 / (max - min);
 
                 autoContrast = new AutoContrastParameters(min, slope);
