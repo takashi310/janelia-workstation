@@ -13,6 +13,7 @@ import org.janelia.horta.omezarr.OmeZarrJadeReader;
 import org.janelia.model.domain.tiledMicroscope.TmSample;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ucar.ma2.InvalidRangeException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,13 +26,13 @@ import java.util.function.Consumer;
  * StaticVolumeBrickSource for Ome-Zarr datasets.
  */
 public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
-    private final static Logger log = LoggerFactory.getLogger(OmeZarrJadeReader.class);
+    private final static Logger log = LoggerFactory.getLogger(OmeZarrVolumeBrickSource.class);
 
     private final ArrayList<Double> resolutionsMicrometers = new ArrayList<>();
 
     private final Map<Double, BrickInfoSet> brickInfoSets = new HashMap<>();
 
-    private final Map<String, AutoContrastParameters> autoContrastMap = new HashMap<>();
+    private AutoContrastParameters autoContrast = null;
 
     private final String basePath;
 
@@ -106,7 +107,7 @@ public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
     @Override
     public BrickInfoSet getAllBrickInfoForResolution(Double resolution) {
         if (resolution != lastResolution) {
-            System.out.println(String.format("requesting resolution %.1f", resolution.floatValue()));
+            log.info(String.format("requesting resolution %.1f", resolution.floatValue()));
             lastResolution = resolution;
         }
 
@@ -122,7 +123,7 @@ public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
 
         double resolutionMicrometers = dataset.getMinSpatialResolution();
 
-        System.out.println(String.format("creating brickset for resolution: %.1f", resolutionMicrometers));
+        log.info(String.format("creating brickset for resolution: %.1f", resolutionMicrometers));
 
         BrickInfoSet brickInfoSet = new BrickInfoSet();
 
@@ -135,10 +136,6 @@ public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
         return Pair.of(resolutionMicrometers, brickInfoSet);
     }
 
-    private final int chunkSegment = 512;
-
-    // private final int zChunkSegment = 1024;
-
     /**
      * Only valid for tczyx OmeZarr datasets.
      *
@@ -149,29 +146,37 @@ public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
     private List<BrainChunkInfo> createTilesForResolution(OmeZarrDataset dataset) throws IOException {
         List<BrainChunkInfo> brickInfoList = new ArrayList<>();
 
-        // [t, c, z, y, x]
-        int[] shape = dataset.getShape();
+        try {
+            // [t, c, z, y, x]
+            int[] shape = dataset.getShape();
 
-        // [x, y, z]
-        int[] chunkSize = {shape[4], shape[3], shape[2]};
+            // [x, y, z]
+            int[] chunkSize = {shape[4], shape[3], shape[2]};
 
-        int[] autoContrastShape = {1, 1, 512, 512, 512};
+            if (autoContrast == null) {
+                int[] autoContrastShape = {1, 1, 256, 256, 128};
 
-        AutoContrastParameters parameters = TCZYXRasterZStack.computeAutoContrast(dataset, autoContrastShape);
+                AutoContrastParameters parameters = TCZYXRasterZStack.computeAutoContrast(dataset, autoContrastShape);
 
-        autoContrastMap.put(dataset.toString(), parameters);
+                double existingMax = parameters.min + (65535.0 / parameters.slope);
 
-        // [z, y, x]
-        List<Double> spatialShape = dataset.getSpatialResolution(OmeZarrAxisUnit.MICROMETER);
+                double min = Math.max(100, parameters.min * 0.1);
+                double max = Math.min(65535.0, Math.max(min + 100, existingMax * 10));
+                double slope = 65535.0 / (max - min);
 
-        // int chunkSegment = (int)Math.round(4e5 / chunkSize[2] / 2.0);
+                autoContrast = new AutoContrastParameters(min, slope);
+            }
 
-        log.info("chunkSegment for dataset path " + dataset.getPath() + ": " + chunkSegment);
+            // [z, y, x]
+            List<Double> spatialShape = dataset.getSpatialResolution(OmeZarrAxisUnit.MICROMETER);
 
-        // Raw TIFF chunks are 1024 x 1536 x 251 for reference (~400M voxels) or 350 x 450 x 250 um (~150k um3).
-        for (int xIdx = 0; xIdx < shape[4]; xIdx += chunkSegment) {
-            for (int yIdx = 0; yIdx < shape[3]; yIdx += chunkSegment) {
-                // for (int zIdx = 0; zIdx < shape[2]; zIdx += zChunkSegment) {
+            int chunkSegment = (int)Math.round(4e5 / chunkSize[2] / 1.0);
+
+            log.info("chunkSegment for dataset path " + dataset.getPath() + ": " + chunkSegment);
+
+            for (int xIdx = 0; xIdx < shape[4]; xIdx += chunkSegment) {
+                for (int yIdx = 0; yIdx < shape[3]; yIdx += chunkSegment) {
+                    // for (int zIdx = 0; zIdx < shape[2]; zIdx += zChunkSegment) {
 
                     // [x, y, z]
                     int[] offset = {xIdx, yIdx, 0}; // zIdx};
@@ -184,9 +189,12 @@ public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
                     double[] voxelSize = {spatialShape.get(2), spatialShape.get(1), spatialShape.get(0)};
 
                     // All args [x, y, z]
-                    brickInfoList.add(new BrainChunkInfo(dataset, chunkSize, offset, voxelSize, shape[1], parameters));
-                // }
+                    brickInfoList.add(new BrainChunkInfo(dataset, chunkSize, offset, voxelSize, shape[1], autoContrast));
+                    // }
+                }
             }
+        } catch (Exception ex) {
+            log.info(ex.getMessage());
         }
 
         return brickInfoList;
