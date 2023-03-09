@@ -965,8 +965,8 @@ public final class NeuronTracerTopComponent extends TopComponent
 
         // reduce near clipping of volume block surfaces
         Viewport vp = sceneWindow.getCamera().getViewport();
-        vp.setzNearRelative(0.93f);
-        vp.setzFarRelative(1.07f);
+        vp.setzNearRelative(0.5f);
+        vp.setzFarRelative(1.5f);
         vp.getChangeObservable().addObserver(new Observer() {
             @Override
             public void update(Observable o, Object arg) {

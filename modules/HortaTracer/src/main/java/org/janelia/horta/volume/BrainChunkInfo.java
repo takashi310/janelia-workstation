@@ -11,6 +11,8 @@ import org.janelia.geometry3d.ConstVector3;
 import org.janelia.geometry3d.Vector3;
 import org.janelia.gltools.texture.Texture3d;
 import org.janelia.horta.BrainTileInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.*;
 import java.awt.color.ColorSpace;
@@ -18,6 +20,7 @@ import java.awt.image.*;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * In principle intended to implement BrickInfo.  There are substantial enough differences from BrainTileInfo that it
@@ -26,23 +29,23 @@ import java.util.List;
  * Ome Zarr support for now.
  */
 public class BrainChunkInfo extends BrainTileInfo {
+    private final static Logger log = LoggerFactory.getLogger(BrainChunkInfo.class);
+
     private final OmeZarrDataset dataset;
 
     private final int[] readShape;
 
     private final int[] readOffset;
 
-    private final int[] shapeMicrometers;
+    private final double[] voxelSize;
 
-    private final int[] originMicrometers;
+    private final double[] shapeMicrometers;
+
+    private final double[] originMicrometers;
 
     private final int[] pixelDims;
 
     private final int bytesPerIntensity;
-
-    private final double[] voxelSize;
-
-    private final Matrix transform;
 
     private Matrix stageCoordToTexCoord;
 
@@ -52,11 +55,10 @@ public class BrainChunkInfo extends BrainTileInfo {
 
     private int colorChannelIndex = 0;
 
+    private boolean haveShownBoundingBox = false;
+
     public BrainChunkInfo(OmeZarrDataset dataset, int[] shape, int[] offset, double[] voxelSize, int channelCount, AutoContrastParameters autoContrastParameters) throws IOException {
         super();
-
-        System.out.println(String.format("creating chunk for path %s: shape [%d, %d, %d]; offset  [%d, %d, %d]", dataset.getPath(),
-                shape[0], shape[1], shape[2], offset[0], offset[1], offset[1]));
 
         this.dataset = dataset;
 
@@ -65,30 +67,23 @@ public class BrainChunkInfo extends BrainTileInfo {
         this.voxelSize = voxelSize;
 
         // TODO include any translate from multiscale/dataset coordinate transforms.
-        originMicrometers = new int[3];
-        shapeMicrometers = new int[3];
+        originMicrometers = new double[3];
+        shapeMicrometers = new double[3];
         pixelDims = new int[4];
 
         pixelDims[0] = shape[0];
         pixelDims[1] = shape[1];
         pixelDims[2] = shape[2];
 
-        originMicrometers[0] = (int) (voxelSize[0] * offset[0]);
-        originMicrometers[1] = (int) (voxelSize[1] * offset[1]);
-        originMicrometers[2] = (int) (voxelSize[2] * offset[2]);
+        originMicrometers[0] = this.voxelSize[0] * offset[0];
+        originMicrometers[1] = this.voxelSize[1] * offset[1];
+        originMicrometers[2] = this.voxelSize[2] * offset[2];
 
-        shapeMicrometers[0] = (int) (voxelSize[0] * pixelDims[0]);
-        shapeMicrometers[1] = (int) (voxelSize[1] * pixelDims[1]);
-        shapeMicrometers[2] = (int) (voxelSize[2] * pixelDims[2]);
-
-        System.out.println(String.format("created chunk with origin [%d, %d, %d]; size  [%d, %d, %d]",
-                originMicrometers[0], originMicrometers[1], originMicrometers[2], shapeMicrometers[0], shapeMicrometers[1], shapeMicrometers[2]));
+        shapeMicrometers[0] = this.voxelSize[0] * pixelDims[0];
+        shapeMicrometers[1] = this.voxelSize[1] * pixelDims[1];
+        shapeMicrometers[2] = this.voxelSize[2] * pixelDims[2];
 
         pixelDims[3] = channelCount;
-
-        Matrix scaling = new Matrix(new double[][]{{voxelSize[0], 0, 0, 0}, {0, voxelSize[1], 0, 0}, {0, 0, voxelSize[2], 0}, {0, 0, 0, 1}});
-
-        transform = scaling; // translation.times(scaling);
 
         // TODO assumes 2 bytes per intensity.
         this.bytesPerIntensity = 2;
@@ -100,30 +95,12 @@ public class BrainChunkInfo extends BrainTileInfo {
         // Assumes tczyx dataset.  Default to time 0, channel 0.
         this.readOffset = new int[]{0, 0, offset[2], offset[1], offset[0]};
 
-        tileRelativePath = String.format("[%s] [%d, %d, %d] [%d, %d, %d]", dataset.getPath(), originMicrometers[0], originMicrometers[1], originMicrometers[2], shapeMicrometers[0], shapeMicrometers[1], shapeMicrometers[2]);
-    }
-    @Override
-    public String getTileRelativePath() {
-        return tileRelativePath;
+        tileRelativePath = String.format("[%s] [%.0f, %.0f, %.0f] [%.0f, %.0f, %.0f]", dataset.getPath(), originMicrometers[0], originMicrometers[1], originMicrometers[2], shapeMicrometers[0], shapeMicrometers[1], shapeMicrometers[2]);
     }
 
     @Override
-    public List<? extends ConstVector3> getCornerLocations() {
-        List<ConstVector3> result = new ArrayList<>();
-        for (int pz : new int[]{0, pixelDims[2]}) {
-            for (int py : new int[]{0, pixelDims[1]}) {
-                for (int px : new int[]{0, pixelDims[0]}) {
-                    Matrix corner = new Matrix(new double[]{px + readOffset[4], py + readOffset[3], pz + readOffset[2], 1}, 4);
-                    Matrix um = transform.times(corner);
-                    ConstVector3 v = new Vector3(
-                            (float) um.get(0, 0),
-                            (float) um.get(1, 0),
-                            (float) um.get(2, 0));
-                    result.add(v);
-                }
-            }
-        }
-        return result;
+    public String getTileRelativePath() {
+        return tileRelativePath;
     }
 
     @Override
@@ -143,13 +120,14 @@ public class BrainChunkInfo extends BrainTileInfo {
 
     @Override
     public double getResolutionMicrometers() {
-        float resolution = Float.MAX_VALUE;
+        double resolution = Float.MAX_VALUE;
 
         for (int xyz = 0; xyz < 3; ++xyz) {
-            float res = shapeMicrometers[xyz] / (float) pixelDims[xyz];
+            double res = shapeMicrometers[xyz] / (double) pixelDims[xyz];
             if (res < resolution)
                 resolution = res;
         }
+
         return resolution;
     }
 
@@ -163,7 +141,50 @@ public class BrainChunkInfo extends BrainTileInfo {
         result.include(bbOrigin);
         result.include(bbOrigin.add(bbSize));
 
+        if (!haveShownBoundingBox) {
+            System.out.printf("bounding box for origin [%f, %f, %f]:\n",
+                    originMicrometers[0], originMicrometers[1], originMicrometers[2]);
+            System.out.printf("\tmin: [%f, %f, %f]\n", result.min.get(0), result.min.get(1), result.min.get(2));
+            System.out.printf("\tmax: [%f, %f, %f]\n", result.max.get(0), result.max.get(1), result.max.get(2));
+            haveShownBoundingBox = true;
+        }
+
         return result;
+    }
+
+    @Override
+    public List<? extends ConstVector3> getCornerLocations() {
+        List<ConstVector3> result = new ArrayList<>();
+        for (double pz : new double[]{0, pixelDims[2]}) {
+            for (double py : new double[]{0, pixelDims[1]}) {
+                for (double px : new double[]{0, pixelDims[0]}) {
+                    Matrix corner = new Matrix(new double[]{(px + readOffset[4]) * voxelSize[0], (py + readOffset[3]) * voxelSize[1], (pz + readOffset[2]) * voxelSize[2], 1}, 4);
+                    ConstVector3 v = new Vector3(
+                            (float) corner.get(0, 0),
+                            (float) corner.get(1, 0),
+                            (float) corner.get(2, 0));
+                    result.add(v);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    @Override
+    public Matrix getStageCoordToTexCoord() {
+        // Compute matrix just-in-time
+        if (stageCoordToTexCoord == null) {
+
+            // For ray casting, convert from stageUm to texture coordinates (i.e. normalized voxels)
+            stageCoordToTexCoord = new Matrix(new double[][]{
+                    {1.0 / shapeMicrometers[0], 0, 0, 0 /*readOffset[0]*/},
+                    {0, 1.0 / shapeMicrometers[1], 0, 0 /*readOffset[1]*/},
+                    {0, 0, 1.0 / shapeMicrometers[2], 0 /*readOffset[2]*/},
+                    {0, 0, 0, 1}});
+        }
+
+        return stageCoordToTexCoord;
     }
 
     private static final ColorModel colorModel = new ComponentColorModel(ColorSpace.getInstance(ColorSpace.CS_GRAY), false, true, Transparency.OPAQUE, DataBuffer.TYPE_USHORT);
@@ -185,6 +206,7 @@ public class BrainChunkInfo extends BrainTileInfo {
 
             return texture;
         } catch (Exception e) {
+            log.error(e.getMessage());
         }
 
         return null;
@@ -196,25 +218,7 @@ public class BrainChunkInfo extends BrainTileInfo {
             return false;
         }
 
-        return ((BrainChunkInfo) other).getTileRelativePath() == tileRelativePath;
-    }
-
-    @Override
-    public Matrix getStageCoordToTexCoord() {
-        // Compute matrix just-in-time
-        if (stageCoordToTexCoord == null) {
-            Matrix stageUmToVoxel = transform.inverse();
-
-            // For ray casting, convert from stageUm to texture coordinates (i.e. normalized voxels)
-            Matrix microsToPixel = new Matrix(new double[][]{
-                    {1.0 / pixelDims[0], 0, 0, 0},
-                    {0, 1.0 / pixelDims[1], 0, 0},
-                    {0, 0, 1.0 / pixelDims[2], 0},
-                    {0, 0, 0, 1}});
-
-            stageCoordToTexCoord = microsToPixel.times(stageUmToVoxel);
-        }
-        return stageCoordToTexCoord;
+        return Objects.equals(((BrainChunkInfo) other).getTileRelativePath(), tileRelativePath);
     }
 
     @Override
