@@ -87,9 +87,11 @@ public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
 
                 Pair<Double, BrickInfoSet> pair = createBricksetForDataset(dataset);
 
-                resolutionsMicrometers.add(pair.getLeft());
+                if (pair.getRight() != null && !pair.getRight().isEmpty()) {
+                    resolutionsMicrometers.add(pair.getLeft());
 
-                brickInfoSets.put(pair.getLeft(), pair.getRight());
+                    brickInfoSets.put(pair.getLeft(), pair.getRight());
+                }
             } catch (Exception ex) {
                 log.info("failed to initialize dataset at index " + idx);
             }
@@ -158,19 +160,21 @@ public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
 
                 AutoContrastParameters parameters = TCZYXRasterZStack.computeAutoContrast(dataset, autoContrastShape);
 
-                double existingMax = parameters.min + (65535.0 / parameters.slope);
+                if (parameters != null) {
+                    double existingMax = parameters.min + (65535.0 / parameters.slope);
 
-                double min = Math.max(100, parameters.min * 0.1);
-                double max = Math.min(65535.0, Math.max(min + 100, existingMax * 4));
-                double slope = 65535.0 / (max - min);
+                    double min = Math.max(100, parameters.min * 0.1);
+                    double max = Math.min(65535.0, Math.max(min + 100, existingMax * 4));
+                    double slope = 65535.0 / (max - min);
 
-                autoContrast = new AutoContrastParameters(min, slope);
+                    autoContrast = new AutoContrastParameters(min, slope);
+                }
             }
 
             // [z, y, x]
             List<Double> spatialShape = dataset.getSpatialResolution(OmeZarrAxisUnit.MICROMETER);
 
-            int chunkSegment = (int)Math.round(4e5 / chunkSize[2] / 1.0);
+            int chunkSegment = (int) Math.round(4e5 / chunkSize[2] / 1.0);
 
             log.info("chunkSegment for dataset path " + dataset.getPath() + ": " + chunkSegment);
 
