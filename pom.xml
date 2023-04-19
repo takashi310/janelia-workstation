@@ -17,7 +17,7 @@
         <url>https://www.hhmi.org</url>
     </organization>
     <inceptionYear>2011</inceptionYear>
-    
+
     <!-- Licenses -->
     <licenses>
         <license>
@@ -65,12 +65,12 @@
 
         <maven.build.timestamp.format>yyyyMMddHHmm</maven.build.timestamp.format>
         <janeliaws.build.timestamp>${maven.build.timestamp}</janeliaws.build.timestamp>
-        
+
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <janeliaws.maven.requiredVersion>3.2.2</janeliaws.maven.requiredVersion>
         <netbeans.run.params.ide/>
         <netbeans.run.params>${netbeans.run.params.ide}</netbeans.run.params>
-        
+
         <!-- Netbeans Platfrom version -->
         <netbeans.version>RELEASE82</netbeans.version>
 
@@ -93,7 +93,8 @@
         <testFailureIgnore>false</testFailureIgnore>
         <janeliaws.testng.version>6.14.3</janeliaws.testng.version>
         <janeliaws.test.maxMemory>768M</janeliaws.test.maxMemory>
-        <janeliaws.test.reportsDirectory>${project.build.directory}/surefire-reports/plain</janeliaws.test.reportsDirectory>
+        <janeliaws.test.reportsDirectory>${project.build.directory}/surefire-reports/plain
+        </janeliaws.test.reportsDirectory>
         <janeliaws.test.failureIgnore>${testFailureIgnore}</janeliaws.test.failureIgnore>
 
         <janeliaws.debug.args></janeliaws.debug.args>
@@ -102,7 +103,7 @@
         <janeliaws.codesign.identity>Developer ID Application</janeliaws.codesign.identity>
 
         <!--==== Dependency Versions ==================================================================================-->
-        
+
         <janeliaws.slf4j.version>1.7.26</janeliaws.slf4j.version>
 
         <janeliaws.jackson.version>2.13.3</janeliaws.jackson.version>
@@ -154,13 +155,13 @@
         <janeliaws.build-helper-maven-plugin.version>3.0.0</janeliaws.build-helper-maven-plugin.version>
 
         <janeliaws.nbm-maven-plugin.version>4.1</janeliaws.nbm-maven-plugin.version>
-        
+
         <janeliaws.wagon-maven-plugin.version>2.0.0</janeliaws.wagon-maven-plugin.version>
-        
+
         <janeliaws.nexus-staging-maven-plugin.version>1.6.8</janeliaws.nexus-staging-maven-plugin.version>
 
         <janeliaws.site-maven-plugin.version>0.12</janeliaws.site-maven-plugin.version>
-        
+
         <janeliaws.versions-maven-plugin.version>2.7</janeliaws.versions-maven-plugin.version>
 
         <janeliaws.maven-enforcer-plugin.version>3.0.0-M2</janeliaws.maven-enforcer-plugin.version>
@@ -208,14 +209,14 @@
         <!-- Dependencies -->
         <dependencies>
 
-            <!-- branding --> 
+            <!-- branding -->
             <dependency>
                 <groupId>org.janelia.workstation</groupId>
                 <artifactId>branding</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
-            <!-- DarculaLAF --> 
+            <!-- DarculaLAF -->
             <dependency>
                 <groupId>org.janelia.workstation</groupId>
                 <artifactId>darcula</artifactId>
@@ -235,8 +236,8 @@
                 <artifactId>n5viewer</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            
-            <!-- IntegrationAPIs --> 
+
+            <!-- IntegrationAPIs -->
             <dependency>
                 <groupId>org.janelia.workstation</groupId>
                 <artifactId>integration</artifactId>
@@ -319,7 +320,7 @@
                 <artifactId>viewercontroller</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            
+
             <!-- Viewer 3D -->
             <dependency>
                 <groupId>org.janelia.workstation</groupId>
@@ -327,7 +328,7 @@
                 <version>${project.version}</version>
             </dependency>
 
-            <!-- GL Viewer --> 
+            <!-- GL Viewer -->
             <dependency>
                 <groupId>org.janelia.workstation</groupId>
                 <artifactId>gltools</artifactId>
@@ -442,8 +443,8 @@
                 <artifactId>jetty-server</artifactId>
                 <version>${janeliaws.jetty.version}</version>
             </dependency>
-            
-            <!-- NetBeans Modules --> 
+
+            <!-- NetBeans Modules -->
             <dependency>
                 <groupId>org.netbeans.cluster</groupId>
                 <artifactId>platform</artifactId>
@@ -753,7 +754,7 @@
                     <artifactId>maven-resources-plugin</artifactId>
                     <version>${janeliaws.maven-resources-plugin.version}</version>
                 </plugin>
-               <plugin>
+                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
                     <version>${janeliaws.maven-dependency-plugin.version}</version>
@@ -850,7 +851,7 @@
                     </compilerArgs>
                 </configuration>
             </plugin>
- 
+
             <!-- Skip unit tests in non-deployment or release mode -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -861,33 +862,33 @@
                     </includes>
                 </configuration>
             </plugin>
-             
+
             <!-- Copy and apply filtering on manifest.mf file -->
-            <plugin> 
-                <artifactId>maven-resources-plugin</artifactId> 
-                <executions> 
-                    <execution> 
-                        <id>generate-modules-xml</id> 
-                        <phase>generate-resources</phase> 
-                        <goals> 
-                            <goal>copy-resources</goal> 
-                        </goals> 
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>generate-modules-xml</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
                         <configuration>
-                            <outputDirectory>${basedir}/target/</outputDirectory> 
-                            <resources> 
-                                <resource> 
-                                    <directory>src/main/nbm</directory> 
-                                    <includes> 
+                            <outputDirectory>${basedir}/target/</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/main/nbm</directory>
+                                    <includes>
                                         <include>manifest.mf</include>
-                                    </includes> 
-                                    <filtering>true</filtering> 
-                                </resource> 
-                            </resources> 
-                        </configuration> 
-                    </execution> 
-                </executions> 
+                                    </includes>
+                                    <filtering>true</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
-            
+
             <!-- NBM options -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -897,16 +898,16 @@
                     <sourceManifestFile>${project.build.directory}/manifest.mf</sourceManifestFile>
                     <brandingToken>${brandingToken}</brandingToken>
                     <cluster>${clusterName}</cluster>
-                    
+
                     <!-- Keystore location. Run Maven with '-Dkeystorepassword=' to specify the passphrase -->
                     <keystore>private/keystore</keystore>
                     <keystorealias>janeliaws</keystorealias>
-                    
+
                     <!-- NBM settings -->
                     <requiresRestart>true</requiresRestart>
                     <licenseName>Janelia Open Source License</licenseName>
                     <licenseFile>license.txt</licenseFile>
-                    
+
                     <!-- Installer settings -->
                     <installDirName>${clusterName}</installDirName>
                     <installerOsSolaris>false</installerOsSolaris>
@@ -1157,7 +1158,7 @@
                 </plugins>
             </build>
         </profile>
-        
+
         <!-- Properties for release -->
         <profile>
             <id>release</id>
@@ -1192,7 +1193,7 @@
         </profile>
 
     </profiles>
-    
+
     <modules>
         <module>modules/AdministrationGUI</module>
         <module>modules/CommonLibraries</module>
