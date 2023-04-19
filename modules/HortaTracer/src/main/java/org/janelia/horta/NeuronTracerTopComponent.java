@@ -35,6 +35,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jogamp.opengl.util.awt.AWTGLReadBufferUtil;
 
 import org.janelia.geometry3d.ObservableInterface;
+import org.janelia.horta.loader.*;
+import org.janelia.horta.volume.*;
 import org.janelia.workstation.common.actions.CopyToClipboardAction;
 import org.janelia.workstation.controller.dialog.NeuronColorDialog;
 import org.janelia.workstation.controller.listener.ColorModelListener;
@@ -53,7 +55,6 @@ import org.janelia.gltools.GL3Actor;
 import org.janelia.gltools.MeshActor;
 import org.janelia.gltools.MultipassRenderer;
 import org.janelia.gltools.material.TransparentEnvelope;
-import org.janelia.horta.volume.VolumeMipMaterial;
 import org.janelia.horta.actions.ResetHortaRotationAction;
 import org.janelia.horta.activity_logging.ActivityLogHelper;
 import org.janelia.horta.actors.CenterCrossHairActor;
@@ -61,21 +62,8 @@ import org.janelia.horta.actors.ScaleBar;
 import org.janelia.horta.actors.TetVolumeActor;
 import org.janelia.horta.blocks.KtxOctreeBlockTileSource;
 import org.janelia.horta.controller.HortaManager;
-import org.janelia.horta.loader.DroppedFileHandler;
-import org.janelia.horta.loader.GZIPFileLoader;
-import org.janelia.horta.loader.HortaKtxLoader;
-import org.janelia.horta.loader.HortaVolumeCache;
-import org.janelia.horta.loader.LZ4FileLoader;
-import org.janelia.horta.loader.ObjMeshLoader;
-import org.janelia.horta.loader.TarFileLoader;
-import org.janelia.horta.loader.TgzFileLoader;
-import org.janelia.horta.loader.TilebaseYamlLoader;
 import org.janelia.horta.movie.HortaMovieSource;
 import org.janelia.horta.render.NeuronMPRenderer;
-import org.janelia.horta.volume.BrickActor;
-import org.janelia.horta.volume.BrickInfo;
-import org.janelia.horta.volume.LocalVolumeBrickSource;
-import org.janelia.horta.volume.StaticVolumeBrickSource;
 import org.janelia.model.domain.DomainConstants;
 import org.janelia.model.domain.tiledMicroscope.*;
 import org.janelia.rendering.RenderedVolumeLoader;
@@ -977,8 +965,8 @@ public final class NeuronTracerTopComponent extends TopComponent
 
         // reduce near clipping of volume block surfaces
         Viewport vp = sceneWindow.getCamera().getViewport();
-        vp.setzNearRelative(0.93f);
-        vp.setzFarRelative(1.07f);
+        vp.setzNearRelative(0.5f);
+        vp.setzFarRelative(1.5f);
         vp.getChangeObservable().addObserver(new Observer() {
             @Override
             public void update(Observable o, Object arg) {
@@ -1004,6 +992,12 @@ public final class NeuronTracerTopComponent extends TopComponent
         neuronTraceLoader.loadTileAtCurrentFocus(volumeSource);
     }
 
+    public boolean loadDroppedOmeZarr(String sourceName) throws IOException {
+        setVolumeSource(new OmeZarrVolumeBrickSource(sourceName).init());
+        neuronTraceLoader.loadTileAtCurrentFocus(volumeSource);
+        return true;
+    }
+
     private void setupDragAndDropYml() {
         final DroppedFileHandler droppedFileHandler = new DroppedFileHandler();
         droppedFileHandler.addLoader(new GZIPFileLoader());
@@ -1013,6 +1007,7 @@ public final class NeuronTracerTopComponent extends TopComponent
         droppedFileHandler.addLoader(new TilebaseYamlLoader(this));
         droppedFileHandler.addLoader(new ObjMeshLoader(this));
         droppedFileHandler.addLoader(new HortaKtxLoader(this.getNeuronMPRenderer()));
+        droppedFileHandler.addLoader(new OmeZarrLoader(this));
 
         // Allow user to drop tilebase.cache.yml on this window
         setDropTarget(new DropTarget(this, new DropTargetListener() {
