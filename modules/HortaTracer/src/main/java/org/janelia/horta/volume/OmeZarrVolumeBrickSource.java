@@ -176,27 +176,36 @@ public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
 
             int chunkSegment = (int) Math.round(4e5 / chunkSize[2] / 1.0);
 
-            log.info("chunkSegment for dataset path " + dataset.getPath() + ": " + chunkSegment);
+            int xChunkSegment = chunkSegment;
+            int yChunkSegment = chunkSegment;
+            int zChunkSegment = 512000000;
 
-            for (int xIdx = 0; xIdx < shape[4]; xIdx += chunkSegment) {
-                for (int yIdx = 0; yIdx < shape[3]; yIdx += chunkSegment) {
-                    // for (int zIdx = 0; zIdx < shape[2]; zIdx += zChunkSegment) {
+            log.info("chunkSegments for dataset path " + dataset.getPath() + ": " + xChunkSegment + "," + yChunkSegment + "," + zChunkSegment);
 
-                    // [x, y, z]
-                    int[] offset = {xIdx, yIdx, 0}; // zIdx};
+            int chunkCount = 0;
 
-                    chunkSize[0] = Math.min(shape[4] - xIdx, chunkSegment);
-                    chunkSize[1] = Math.min(shape[3] - yIdx, chunkSegment);
-                    // chunkSize[2] = Math.min(shape[2] - zIdx, zChunkSegment);
+            for (int xIdx = 0; xIdx < shape[4]; xIdx += xChunkSegment) {
+                for (int yIdx = 0; yIdx < shape[3]; yIdx += yChunkSegment) {
+                    for (int zIdx = 0; zIdx < shape[2]; zIdx += zChunkSegment) {
+                        // [x, y, z]
+                        int[] offset = {xIdx, yIdx, zIdx};
 
-                    // [x, y, z]
-                    double[] voxelSize = {spatialShape.get(2), spatialShape.get(1), spatialShape.get(0)};
+                        chunkSize[0] = Math.min(shape[4] - xIdx, xChunkSegment);
+                        chunkSize[1] = Math.min(shape[3] - yIdx, yChunkSegment);
+                        chunkSize[2] = Math.min(shape[2] - zIdx, zChunkSegment);
 
-                    // All args [x, y, z]
-                    brickInfoList.add(new BrainChunkInfo(dataset, chunkSize, offset, voxelSize, shape[1], autoContrast));
-                    // }
+                        // [x, y, z]
+                        double[] voxelSize = {spatialShape.get(2), spatialShape.get(1), spatialShape.get(0)};
+
+                        // All args [x, y, z]
+                        brickInfoList.add(new BrainChunkInfo(dataset, chunkSize, offset, voxelSize, shape[1], autoContrast));
+
+                        chunkCount++;
+                    }
                 }
             }
+
+            log.info(chunkCount + " chunks for dataset path " + dataset.getPath());
         } catch (Exception ex) {
             log.info(ex.getMessage());
         }

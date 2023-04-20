@@ -142,10 +142,6 @@ public class BrainChunkInfo extends BrainTileInfo {
         result.include(bbOrigin.add(bbSize));
 
         if (!haveShownBoundingBox) {
-            System.out.printf("bounding box for origin [%f, %f, %f]:\n",
-                    originMicrometers[0], originMicrometers[1], originMicrometers[2]);
-            System.out.printf("\tmin: [%f, %f, %f]\n", result.min.get(0), result.min.get(1), result.min.get(2));
-            System.out.printf("\tmax: [%f, %f, %f]\n", result.max.get(0), result.max.get(1), result.max.get(2));
             haveShownBoundingBox = true;
         }
 
@@ -200,7 +196,7 @@ public class BrainChunkInfo extends BrainTileInfo {
         Texture3d texture = new Texture3d();
 
         try {
-            WritableRaster[] slices = TCZYXRasterZStack.fromDataset(dataset, readShape, readOffset, true, autoContrastParameters, false);
+            WritableRaster[] slices = TCZYXRasterZStack.fromDataset(dataset, readShape, readOffset,false, true, autoContrastParameters, null);
 
             texture.loadRasterSlices(slices, colorModel);
 
