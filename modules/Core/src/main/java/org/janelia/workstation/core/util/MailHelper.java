@@ -29,9 +29,10 @@ public class MailHelper {
 
     public void sendEmail(String from, String to, String subject, String bodyText, File attachedFile, String filename) {
         try {
-
-            String MAIL_SERVER = ConsoleProperties.getString("console.MailServer");
-            String[] split = MAIL_SERVER.split(":");
+            String mailServer = ConsoleProperties.getString("console.MailServer");
+            String mailUser = ConsoleProperties.getString("console.MailUser", "");
+            String mailPassword = ConsoleProperties.getString("console.MailPassword", "");
+            String[] split = mailServer.split(":");
             String host = split[0];
             String port = DEFAULT_SMTP_PORT;
             if (split.length > 1) {
@@ -41,8 +42,24 @@ public class MailHelper {
             Properties properties = new Properties();
             properties.put("mail.smtp.host", host);
             properties.put("mail.smtp.port", port);
+            String mailSSLProtocols = ConsoleProperties.getString("console.MailSSLProtocol", "");
+            Authenticator authenticator;
+            if (mailUser.trim().length() > 0 && mailPassword.trim().length() > 0) {
+                properties.put("mail.smtp.auth", "true");
+                properties.put("mail.smtp.starttls.enable", "true");
+                if (mailSSLProtocols.trim().length() > 0) properties.put("mail.smtp.ssl.protocols", mailSSLProtocols);
+                properties.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
+                authenticator = new Authenticator() {
+                    protected PasswordAuthentication getPasswordAuthentication() {
+                        return new PasswordAuthentication(
+                                mailUser, mailPassword);
+                    }
+                };
+            } else {
+                authenticator = null;
+            }
 
-            Session session = Session.getDefaultInstance(properties, null);
+            Session session = Session.getDefaultInstance(properties, authenticator);
             Message message = new MimeMessage(session);
             message.setFrom(new InternetAddress(from));
             message.setRecipients(RecipientType.TO, InternetAddress.parse(to));
