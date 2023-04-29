@@ -196,7 +196,7 @@ public class BrainChunkInfo extends BrainTileInfo {
         Texture3d texture = new Texture3d();
 
         try {
-            WritableRaster[] slices = TCZYXRasterZStack.fromDataset(dataset, readShape, readOffset,false, true, autoContrastParameters, null);
+            WritableRaster[] slices = TCZYXRasterZStack.fromDataset(dataset, readShape, readOffset, 1, true, autoContrastParameters, null);
 
             texture.loadRasterSlices(slices, colorModel);
 
