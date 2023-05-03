@@ -1,23 +1,17 @@
 package org.janelia.horta.volume;
 
-import com.google.common.collect.ImmutableSet;
 import org.aind.omezarr.OmeZarrAxisUnit;
 import org.aind.omezarr.OmeZarrDataset;
 import org.aind.omezarr.OmeZarrGroup;
 import org.aind.omezarr.image.AutoContrastParameters;
 import org.aind.omezarr.image.TCZYXRasterZStack;
 import org.apache.commons.lang3.tuple.Pair;
-import org.janelia.horta.TileLoader;
 import org.janelia.horta.omezarr.JadeZarrStoreProvider;
 import org.janelia.horta.omezarr.OmeZarrJadeReader;
-import org.janelia.model.domain.tiledMicroscope.TmSample;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ucar.ma2.InvalidRangeException;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Consumer;
@@ -145,7 +139,7 @@ public class OmeZarrVolumeBrickSource implements StaticVolumeBrickSource {
      * @return
      * @throws IOException
      */
-    private List<BrainChunkInfo> createTilesForResolution(OmeZarrDataset dataset) throws IOException {
+    private List<BrainChunkInfo> createTilesForResolution(OmeZarrDataset dataset) {
         List<BrainChunkInfo> brickInfoList = new ArrayList<>();
 
         try {

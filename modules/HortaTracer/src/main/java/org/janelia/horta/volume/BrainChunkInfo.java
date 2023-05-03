@@ -57,7 +57,7 @@ public class BrainChunkInfo extends BrainTileInfo {
 
     private boolean haveShownBoundingBox = false;
 
-    public BrainChunkInfo(OmeZarrDataset dataset, int[] shape, int[] offset, double[] voxelSize, int channelCount, AutoContrastParameters autoContrastParameters) throws IOException {
+    public BrainChunkInfo(OmeZarrDataset dataset, int[] shape, int[] offset, double[] voxelSize, int channelCount, AutoContrastParameters autoContrastParameters) {
         super();
 
         this.dataset = dataset;
