@@ -44,27 +44,25 @@ public class OmeZarrVolumeActor extends BasicGL3Actor implements DepthSlabClippe
         blockDisplayUpdater = new BlockDisplayUpdater<>(chooser);
         initBlockStrategy(chooser);
         blockDisplayUpdater.getDisplayChangeObservable().addObserver((o, arg) -> dynamicTiles.updateDesiredTiles(blockDisplayUpdater.getDesiredBlocks()));
+        dynamicTiles.getDisplayChangeObservable().addObserver(((o, arg) -> {
+            List<Object3d> list = new ArrayList<>();
+            getChildren().forEach(c -> {
+                if (!dynamicTiles.getDisplayedActors().contains(c)) {
+                    list.add(c);
+                }
+            });
+            getChildren().removeAll(list);
+            dynamicTiles.getDisplayedActors().forEach(a -> {
+                if (!getChildren().contains(a)) {
+                    addPersistentBlock(a);
+                }
+            });
+        }));
     }
 
     private void initBlockStrategy(BlockChooser<OmeZarrBlockTileKey, OmeZarrBlockTileSource> chooser) {
         dynamicTiles.setBlockStrategy(chooser);
         blockDisplayUpdater.setBlockChooser(chooser);
-    }
-
-    @Override
-    public void display(GL3 gl, AbstractCamera camera, Matrix4 parentModelViewMatrix)
-    {
-        super.display(gl, camera, parentModelViewMatrix); // display child
-
-        List<SortableBlockActor> blockList = new ArrayList<>();
-
-        for (SortableBlockActor actor : dynamicTiles.getDisplayedActors()) {
-            blockList.add(actor);
-        }
-
-        for (SortableBlockActor actor : blockList) {
-            actor.display(gl, camera, parentModelViewMatrix);
-        }
     }
 
     public void setAutoUpdate(boolean updateCache) {
@@ -82,8 +80,8 @@ public class OmeZarrVolumeActor extends BasicGL3Actor implements DepthSlabClippe
     @Override
     public Object3d addChild(Object3d child) {
         if (child instanceof DepthSlabClipper) {
-            ((DepthSlabClipper)child).setOpaqueDepthTexture(opaqueDepthTexture);
-            ((DepthSlabClipper)child).setRelativeSlabThickness(zNearRelative, zFarRelative);
+            ((DepthSlabClipper) child).setOpaqueDepthTexture(opaqueDepthTexture);
+            ((DepthSlabClipper) child).setRelativeSlabThickness(zNearRelative, zFarRelative);
         }
         return super.addChild(child);
     }
@@ -123,21 +121,21 @@ public class OmeZarrVolumeActor extends BasicGL3Actor implements DepthSlabClippe
     public void setOpaqueDepthTexture(Texture2d opaqueDepthTexture) {
         this.opaqueDepthTexture = opaqueDepthTexture;
 
-        getChildren().forEach( c-> {
+        getChildren().forEach(c -> {
             if (c instanceof DepthSlabClipper) {
-                ((DepthSlabClipper)c).setOpaqueDepthTexture(opaqueDepthTexture);
+                ((DepthSlabClipper) c).setOpaqueDepthTexture(opaqueDepthTexture);
             }
         });
     }
 
     @Override
     public void setRelativeSlabThickness(float zNear, float zFar) {
-        // zNearRelative = zNear;
-        // zFarRelative = zFar;
+        zNearRelative = zNear;
+        zFarRelative = zFar;
 
-        getChildren().forEach( c-> {
+        getChildren().forEach(c -> {
             if (c instanceof DepthSlabClipper) {
-                ((DepthSlabClipper)c).setRelativeSlabThickness(zNear, zFar);
+                ((DepthSlabClipper) c).setRelativeSlabThickness(zNear, zFar);
             }
         });
     }

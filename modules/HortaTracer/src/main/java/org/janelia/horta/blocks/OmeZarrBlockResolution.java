@@ -36,7 +36,7 @@ public class OmeZarrBlockResolution implements BlockTileResolution {
     }
 
     public float getBlockSizeScale() {
-        return (float) Math.pow(2.0, getBlockPowerScale());
+        return (float) Math.pow(2.5, getBlockPowerScale());
     }
 
     public int[] getChunkSize() {
