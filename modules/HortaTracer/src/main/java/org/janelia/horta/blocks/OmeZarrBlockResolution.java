@@ -42,7 +42,8 @@ public class OmeZarrBlockResolution implements BlockTileResolution {
     public int[] getChunkSize() {
         float scale = getBlockSizeScale();
 
-        return new int[]{(int) (shape[4] / scale), (int) (shape[3] / scale), (int) (shape[2] / scale)};
+        // return new int[]{(int) (shape[4] / scale), (int) (shape[3] / scale), (int) (shape[2] / scale)};
+        return new int[]{512, 512, 512};
     }
 
     @Override
@@ -72,7 +73,7 @@ public class OmeZarrBlockResolution implements BlockTileResolution {
     }
 
     @Override
-    public String toString(){
+    public String toString() {
         return String.format("depth: %d; um/voxel: %.1f; scaleFactor: %d", depth, resolutionMicrometers, blockPowerScale);
     }
 }
