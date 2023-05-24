@@ -107,7 +107,7 @@ public class ViewLoader {
                         } else {
                             loader.loadPersistentKtxTileAtCurrentFocus(nttc.getKtxSource());
                         }
-                    } else if (nttc.isPreferOmeZarr()) {
+                    } else {
                         progress.setDisplayName("Centering on location...");
                         setCameraLocation(syncZoom, syncLocation);
                         // use Ome Zarr tiles
@@ -122,19 +122,7 @@ public class ViewLoader {
                         } else {
                             loader.loadPersistentOmeZarrTileAtCurrentFocus(nttc.getOmeZarrSource());
                         }
-                    } else {
-                        // use raw tiles, which are handled by the StaticVolumeBrickSource
-                        StaticVolumeBrickSource volumeBrickSource = createStaticVolumeBrickSource(renderedVolume, sample, progress);
-                        nttc.setVolumeSource(volumeBrickSource);
-                        // start loading raw tiles
-                        progress.switchToIndeterminate();
-                        progress.setDisplayName("Loading brain tile image...");
-                        loader.loadTileAtCurrentFocus(volumeBrickSource, 0);
-                        // for raw tiles the camera needs to be set after the tile began loading in order to trigger the display
-                        progress.setDisplayName("Centering on location...");
-                        setCameraLocation(1, new Vec3(0, 0, 0));
                     }
-
                     nttc.redrawNow();
                 } catch (final Exception ex) {
                     LOG.error("Error setting up the tile source", ex);
