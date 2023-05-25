@@ -67,7 +67,7 @@ public class OmeZarrBlockTileSource implements BlockTileSource<OmeZarrBlockTileK
                 StringUtils.appendIfMissing(
                         StringUtils.defaultIfBlank(
                                 sample.getLargeVolumeKTXFilepath(),
-                                StringUtils.appendIfMissing(sample.getLargeVolumeOctreeFilepath(), "/") + "fused.zarr"),
+                                StringUtils.appendIfMissing(sample.getLargeVolumeOctreeFilepath(), "/")),
                         "/");
 
         this.reader = new OmeZarrJadeReader(FileMgr.getFileMgr().getStorageService(), this.sampleOmeZarrTilesBaseDir);
