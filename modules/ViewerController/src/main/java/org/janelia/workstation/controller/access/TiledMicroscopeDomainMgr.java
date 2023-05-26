@@ -1,31 +1,23 @@
 package org.janelia.workstation.controller.access;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.RecursiveTask;
-import java.util.stream.Stream;
-
 import org.janelia.it.jacs.model.user_data.tiledMicroscope.CoordinateToRawTransform;
 import org.janelia.model.domain.DomainConstants;
 import org.janelia.model.domain.DomainObjectComparator;
 import org.janelia.model.domain.DomainUtils;
 import org.janelia.model.domain.Reference;
 import org.janelia.model.domain.enums.FileType;
-import org.janelia.model.domain.tiledMicroscope.BulkNeuronStyleUpdate;
-import org.janelia.model.domain.tiledMicroscope.TmNeuronMetadata;
-import org.janelia.model.domain.tiledMicroscope.TmReviewTask;
-import org.janelia.model.domain.tiledMicroscope.TmSample;
-import org.janelia.model.domain.tiledMicroscope.TmWorkspace;
+import org.janelia.model.domain.tiledMicroscope.*;
 import org.janelia.model.domain.workspace.TreeNode;
 import org.janelia.workstation.core.api.AccessManager;
 import org.janelia.workstation.core.api.DomainMgr;
 import org.janelia.workstation.core.api.DomainModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.*;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.RecursiveTask;
+import java.util.stream.Stream;
 
 /**
  * Singleton for managing the Tiled Microscope Domain Model and related data access.
@@ -63,7 +55,7 @@ public class TiledMicroscopeDomainMgr {
         return getSample(workspace.getSampleRef().getTargetId());
     }
 
-    public TmSample createSample(String name, String filepath, String ktxPath, String rawPath) throws Exception {
+    public TmSample createSample(String name, String filepath, String ktxPath, String zarrPath) throws Exception {
         LOG.debug("createTiledMicroscopeSample(name={}, filepath={})", name, filepath);
         TiledMicroscopeRestClient client = new TiledMicroscopeRestClient();
         Map<String,Object> constants = client.getTmSampleConstants(filepath);
@@ -74,11 +66,11 @@ public class TiledMicroscopeDomainMgr {
             sample.setOwnerKey(AccessManager.getSubjectKey());
             sample.setName(name);
             DomainUtils.setFilepath(sample, FileType.LargeVolumeOctree, filepath);
-            if (rawPath != null) {
+            if (ktxPath != null) {
                 DomainUtils.setFilepath(sample, FileType.LargeVolumeKTX, ktxPath);
             }
-            if (rawPath != null) {
-                DomainUtils.setFilepath(sample, FileType.TwoPhotonAcquisition, rawPath);
+            if (zarrPath != null) {
+                DomainUtils.setFilepath(sample, FileType.LargeVolumeZarr, zarrPath);
             }
             // call out to server to get origin/scaling information
             TmSample persistedSample = save(sample);

@@ -1,6 +1,7 @@
 package org.janelia.horta;
 
 import java.awt.*;
+import org.janelia.model.domain.enums.FileType;
 import java.awt.datatransfer.*;
 import java.awt.dnd.*;
 import java.awt.event.*;
@@ -180,7 +181,7 @@ public final class NeuronTracerTopComponent extends TopComponent
 
     // review animation
     private PlayReviewManager playback;
-
+    
     private final HortaManager hortaManager;
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -396,11 +397,11 @@ public final class NeuronTracerTopComponent extends TopComponent
     public SceneWindow getSceneWindow() {
         return sceneWindow;
     }
-
+    
     public void stopPlaybackReview() {
         playback.setPausePlayback(true);
     }
-
+        
     public void resumePlaybackReview(PlayReviewManager.PlayDirection direction) {
         playback.resumePlaythrough(direction);
     }
@@ -850,7 +851,6 @@ public final class NeuronTracerTopComponent extends TopComponent
         setCubifyVoxels(prefs.getBoolean("bCubifyVoxels", doCubifyVoxels));
         volumeCache.setUpdateCache(
                 prefs.getBoolean("bCacheHortaTiles", doesUpdateVolumeCache()));
-        setPreferKtx(prefs.getBoolean("bPreferKtxTiles", isPreferKtx()));
     }
 
     public void initMeshes() {
@@ -1213,7 +1213,7 @@ public final class NeuronTracerTopComponent extends TopComponent
                     }
                 });
 
-                ktxBlockMenuBuilder.populateMenus(menuContext);
+                ktxBlockMenuBuilder.populateMenus(NeuronTracerTopComponent.getInstance(), menuContext);
 
                 if (currentSource != null) {
                     JCheckBoxMenuItem enableVolumeCacheMenu = new JCheckBoxMenuItem(
@@ -2039,7 +2039,6 @@ public final class NeuronTracerTopComponent extends TopComponent
 
     public void clearAllTiles() {
         // this is a workaround for clearing RAW tiles until we can clean up the controllers for Horta
-        setPreferKtx(true);
         TetVolumeActor.getInstance().setAutoUpdate(false);
         OmeZarrVolumeActor.getInstance().setAutoUpdate(false);
         reloadSampleLocation();
@@ -2187,7 +2186,7 @@ public final class NeuronTracerTopComponent extends TopComponent
     void setKtxSource(KtxOctreeBlockTileSource ktxSource) {
         this.ktxSource = ktxSource;
         TetVolumeActor.getInstance().setKtxTileSource(ktxSource);
-        // Don't load ktx and omezarr or raw tiles at the same time
+        // Don't load both ktx and raw tiles at the same time
         if (ktxSource != null) {
             setOmeZarrSource(null);
             setVolumeSource(null);
@@ -2275,19 +2274,12 @@ public final class NeuronTracerTopComponent extends TopComponent
     }
 
     boolean isPreferKtx() {
-        return ktxBlockMenuBuilder.isPreferKtx();
-    }
-
-    public void setPreferKtx(boolean doPreferKtx) {
-        ktxBlockMenuBuilder.setPreferKtx(doPreferKtx);
-    }
-
-    boolean isPreferOmeZarr() {
-        return ktxBlockMenuBuilder.isPreferOmeZarr();
-    }
-
-    public void setPreferOmeZarr(boolean doPreferOmeZarr) {
-        ktxBlockMenuBuilder.setPreferOmeZarr(doPreferOmeZarr);
+        TmSample tmSample = TmModelManager.getInstance().getCurrentSample();
+        if (tmSample.getFiles().containsKey(FileType.LargeVolumeZarr)) {
+            return false;
+        } else {
+            return true;
+        }
     }
 
     public NeuronMPRenderer getNeuronMPRenderer() {
