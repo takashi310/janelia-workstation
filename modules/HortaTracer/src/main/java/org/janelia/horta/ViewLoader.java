@@ -17,8 +17,7 @@ import com.google.common.base.Objects;
 import org.apache.commons.httpclient.DefaultHttpMethodRetryHandler;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.lang.StringUtils;
-import org.janelia.horta.omezarr.OmeZarrJadeReader;
-import org.janelia.horta.volume.OmeZarrVolumeBrickSource;
+import org.janelia.horta.blocks.OmeZarrBlockTileSource;
 import org.janelia.rendering.ymlrepr.RawVolReader;
 import org.janelia.workstation.controller.tileimagery.OsFilePathRemapper;
 import org.janelia.geometry3d.PerspectiveCamera;
@@ -106,6 +105,21 @@ public class ViewLoader {
                         } else {
                             loader.loadPersistentKtxTileAtCurrentFocus(nttc.getKtxSource());
                         }
+                    } else if (nttc.isPreferOmeZarr()) {
+                        progress.setDisplayName("Centering on location...");
+                        setCameraLocation(syncZoom, syncLocation);
+                        // use Ome Zarr tiles
+                        progress.setDisplayName("Loading Ome Zarr brain metadata...");
+                        OmeZarrBlockTileSource omeZarrSource = createOmeZarrSource(url, sample);
+                        nttc.setOmeZarrSource(omeZarrSource);
+                        // start loading Ome Zarr tiles
+                        progress.switchToIndeterminate();
+                        progress.setDisplayName("Loading Ome Zarr brain tile image...");
+                        if (nttc.doesUpdateVolumeCache()) {
+                            loader.loadTransientOmeZarrTileAtCurrentFocus(nttc.getOmeZarrSource());
+                        } else {
+                            loader.loadPersistentOmeZarrTileAtCurrentFocus(nttc.getOmeZarrSource());
+                        }
                     } else {
                         // use raw tiles, which are handled by the StaticVolumeBrickSource
                         StaticVolumeBrickSource volumeBrickSource = createStaticVolumeBrickSource(renderedVolume, sample, progress);
@@ -188,23 +202,25 @@ public class ViewLoader {
         return new KtxOctreeBlockTileSource(renderedOctreeUrl, nttc.getTileLoader()).init(sample);
     }
 
+    private OmeZarrBlockTileSource createOmeZarrSource(URL renderedOmeZarrUrl, TmSample sample) throws IOException {
+        OmeZarrBlockTileSource previousSource = nttc.getOmeZarrSource();
+        if (previousSource != null) {
+            LOG.trace("previousUrl: {}", previousSource.getOriginatingSampleURL());
+            if (Objects.equal(renderedOmeZarrUrl, previousSource.getOriginatingSampleURL())) {
+                return previousSource; // Source did not change
+            }
+        }
+        return new OmeZarrBlockTileSource(renderedOmeZarrUrl, nttc.getImageColorModel()).init(sample);
+    }
+
     private StaticVolumeBrickSource createStaticVolumeBrickSource(RenderedVolume renderedVolume, TmSample sample, ProgressHandle progress) {
         progress.switchToDeterminate(100);
 
         String rawFilePath = sample.getAcquisitionFilepath();
 
-        if (rawFilePath.toLowerCase().endsWith(".zarr")) {
-            try {
-                return new OmeZarrVolumeBrickSource(rawFilePath).init(new OmeZarrJadeReader(FileMgr.getFileMgr().getStorageService(), rawFilePath),
-                        progress::progress);
-            } catch (Exception ex) {
-                return null;
-            }
-        } else {
-            List<RawImage> rawTiles = nttc.getRenderedVolumeLoader().loadVolumeRawImageTiles(renderedVolume.getVolumeLocation());
+        List<RawImage> rawTiles = nttc.getRenderedVolumeLoader().loadVolumeRawImageTiles(renderedVolume.getVolumeLocation());
 
-            return new RawVolumeBrickSource(nttc.getTileLoader()).init(sample, rawTiles, progress::progress);
-        }
+        return new RawVolumeBrickSource(nttc.getTileLoader()).init(sample, rawTiles, progress::progress);
     }
 
     private void setCameraLocation(double zoom, Vec3 sampleLocation) {
