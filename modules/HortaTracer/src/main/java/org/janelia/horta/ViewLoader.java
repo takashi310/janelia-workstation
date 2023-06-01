@@ -88,7 +88,6 @@ public class ViewLoader {
                                 + syncLocation.getY() + ", "
                                 + syncLocation.getZ());
                     }
-                    RenderedVolume renderedVolume = getVolumeInfo(url.toURI());
 
                     if (nttc.isPreferKtx()) {
                         // for KTX tile the camera must be set before the tiles are loaded in order for them to be displayed first time
@@ -121,6 +120,8 @@ public class ViewLoader {
                             loader.loadPersistentOmeZarrTileAtCurrentFocus(nttc.getOmeZarrSource());
                         }
                     } else {
+                        RenderedVolume renderedVolume = getVolumeInfo(url.toURI());
+
                         // use raw tiles, which are handled by the StaticVolumeBrickSource
                         StaticVolumeBrickSource volumeBrickSource = createStaticVolumeBrickSource(renderedVolume, sample, progress);
                         nttc.setVolumeSource(volumeBrickSource);
