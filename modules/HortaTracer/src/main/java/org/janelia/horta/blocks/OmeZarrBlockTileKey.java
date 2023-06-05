@@ -42,12 +42,15 @@ public class OmeZarrBlockTileKey implements BlockTileKey {
 
     private final int keyDepth;
 
+    private Matrix transform;
+
     private Matrix stageCoordToTexCoord;
+
+    private List<ConstVector3> cornerLocations;
 
     private final String relativePath;
 
-    public OmeZarrBlockTileKey(OmeZarrDataset dataset, int keyDepth, int[] shape, int[] offset, double[] voxelSize, int channelCount)
-    {
+    public OmeZarrBlockTileKey(OmeZarrDataset dataset, int keyDepth, int[] shape, int[] offset, double[] voxelSize, int channelCount) {
         this.dataset = dataset;
 
         this.keyDepth = keyDepth;
@@ -71,6 +74,15 @@ public class OmeZarrBlockTileKey implements BlockTileKey {
         shapeMicrometers[1] = this.voxelSize[1] * pixelDims[1];
         shapeMicrometers[2] = this.voxelSize[2] * pixelDims[2];
 
+        transform = new Matrix(
+                new double[][] {
+                        {shapeMicrometers[0]/pixelDims[0], 0, 0, originMicrometers[0]},
+                        {0, shapeMicrometers[1]/pixelDims[1], 0, originMicrometers[1]},
+                        {0, 0, shapeMicrometers[2]/pixelDims[2], originMicrometers[2]},
+                        {0, 0, 0, 1}
+                }
+        );
+
         pixelDims[3] = channelCount;
 
         // switch to [z, y, x] for jomezarr
@@ -93,33 +105,46 @@ public class OmeZarrBlockTileKey implements BlockTileKey {
     }
 
     public List<? extends ConstVector3> getCornerLocations() {
-        List<ConstVector3> result = new ArrayList<>();
-        for (double pz : new double[]{0, pixelDims[2]}) {
-            for (double py : new double[]{0, pixelDims[1]}) {
-                for (double px : new double[]{0, pixelDims[0]}) {
-                    Matrix corner = new Matrix(new double[]{(px + readOffset[4]) * voxelSize[0], (py + readOffset[3]) * voxelSize[1], (pz + readOffset[2]) * voxelSize[2], 1}, 4);
-                    ConstVector3 v = new Vector3(
-                            (float) corner.get(0, 0),
-                            (float) corner.get(1, 0),
-                            (float) corner.get(2, 0));
-                    result.add(v);
+        if (cornerLocations == null) {
+            cornerLocations = new ArrayList<>();
+            for (double pz : new double[]{0, pixelDims[2]}) {
+                for (double py : new double[]{0, pixelDims[1]}) {
+                    for (double px : new double[]{0, pixelDims[0]}) {
+                        Matrix corner = new Matrix(new double[]{(px + readOffset[4]) * voxelSize[0], (py + readOffset[3]) * voxelSize[1], (pz + readOffset[2]) * voxelSize[2], 1}, 4);
+                        ConstVector3 v = new Vector3(
+                                (float) corner.get(0, 0),
+                                (float) corner.get(1, 0),
+                                (float) corner.get(2, 0));
+                        cornerLocations.add(v);
+                    }
                 }
             }
         }
 
-        return result;
+        return cornerLocations;
     }
 
     public Matrix getStageCoordToTexCoord() {
         // Compute matrix just-in-time
         if (stageCoordToTexCoord == null) {
-
+/*
             // For ray casting, convert from stageUm to texture coordinates (i.e. normalized voxels)
             stageCoordToTexCoord = new Matrix(new double[][]{
-                    {1.0 / shapeMicrometers[0], 0, 0, 0 /*readOffset[0]*/},
-                    {0, 1.0 / shapeMicrometers[1], 0, 0 /*readOffset[1]*/},
-                    {0, 0, 1.0 / shapeMicrometers[2], 0 /*readOffset[2]*/},
+                    {1.0 / shapeMicrometers[0], 0, 0, 0},
+                    {0, 1.0 / shapeMicrometers[1], 0, 0},
+                    {0, 0, 1.0 / shapeMicrometers[2], 0},
                     {0, 0, 0, 1}});
+
+ */
+            Matrix stageToVoxel = transform.inverse();
+
+           Matrix nanosToPixel = new Matrix(new double[][] {
+                    {1.0/pixelDims[0], 0, 0, 0},
+                    {0, 1.0/pixelDims[1], 0, 0},
+                    {0, 0, 1.0/pixelDims[2], 0},
+                    {0, 0, 0, 1}});
+
+            stageCoordToTexCoord = nanosToPixel.times(stageToVoxel);
         }
 
         return stageCoordToTexCoord;
@@ -160,7 +185,7 @@ public class OmeZarrBlockTileKey implements BlockTileKey {
     }
 
     @Override
-    public String toString(){
+    public String toString() {
         return relativePath;
     }
 }
