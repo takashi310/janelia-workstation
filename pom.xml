@@ -208,7 +208,7 @@
     <dependencyManagement>
         <!-- Dependencies -->
         <dependencies>
-
+			
             <!-- branding -->
             <dependency>
                 <groupId>org.janelia.workstation</groupId>
